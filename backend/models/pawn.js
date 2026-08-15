@@ -63,7 +63,10 @@ PawnSchema.methods.getPositionAfterMove = function (rolledNumber) {
                 return position;
             }
         case 'yellow':
-            if (position + rolledNumber <= 85) {
+            // 🔧 FIX: pehle yahan "position + rolledNumber <= 85" tha (ye green ki win-limit hai).
+            // Yellow ka apna final position 91 hai (positions.js me yellow end 86-91 hai) —
+            // isse yellow pawns 85+ tak overshoot allow ho jaata tha, glitch ban sakta tha.
+            if (position + rolledNumber <= 91) {
                 if (position >= 12 && position <= 15) {
                     return 29;
                 } else if (position <= 67 && position + rolledNumber > 67) {
