@@ -7,6 +7,8 @@ const LandingPage = () => {
     const navigate = useNavigate();
     const socket = useContext(SocketContext);
     const [joiningBot, setJoiningBot] = useState(false);
+    const [showNamePrompt, setShowNamePrompt] = useState(false);
+    const [botPlayerName, setBotPlayerName] = useState('');
 
     useEffect(() => {
         if (socket) {
@@ -25,16 +27,20 @@ const LandingPage = () => {
 
     const handleFreePlay = () => {
         console.log('🔘 Free Play clicked');
-        if (socket) {
-            console.log('📤 Emitting player:bot...');
-            setJoiningBot(true);
-            socket.emit('player:bot');
-            // Navigation ab yahan manually nahi karni — App.js ka global
-            // 'player:data' listener roomId aate hi khud /game pe le jayega
-        } else {
+        if (!socket) {
             console.error('❌ Socket not available!');
             alert('Backend not connected! Please refresh and try again.');
+            return;
         }
+        setShowNamePrompt(true);
+    };
+
+    const startBotGame = () => {
+        const finalName = botPlayerName.trim() || 'You';
+        console.log('📤 Emitting player:bot with name:', finalName);
+        setJoiningBot(true);
+        setShowNamePrompt(false);
+        socket.emit('player:bot', { name: finalName });
     };
 
     return (
@@ -88,6 +94,64 @@ const LandingPage = () => {
                     <div className="sub-green">Create · Invite · Battle</div>
                 </div>
             </div>
+
+            {/* ===== NEW: Name prompt before starting Bot game ===== */}
+            {showNamePrompt && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.6)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
+                        padding: '20px',
+                        boxSizing: 'border-box',
+                    }}
+                >
+                    <div
+                        style={{
+                            background: '#0a1747',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            borderRadius: '12px',
+                            padding: '24px',
+                            width: '100%',
+                            maxWidth: '320px',
+                            textAlign: 'center',
+                        }}
+                    >
+                        <p style={{ color: 'white', marginBottom: '16px', fontSize: '15px' }}>
+                            Apna naam batao 👇
+                        </p>
+                        <input
+                            type="text"
+                            placeholder="Your name"
+                            value={botPlayerName}
+                            onChange={e => setBotPlayerName(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && startBotGame()}
+                            autoFocus
+                            style={{
+                                width: '100%',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                border: '1px solid #ccc',
+                                marginBottom: '16px',
+                                boxSizing: 'border-box',
+                            }}
+                        />
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                            <button
+                                onClick={() => setShowNamePrompt(false)}
+                                style={{ background: 'rgba(255,255,255,0.1)' }}
+                            >
+                                Cancel
+                            </button>
+                            <button onClick={startBotGame}>Start Game</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
