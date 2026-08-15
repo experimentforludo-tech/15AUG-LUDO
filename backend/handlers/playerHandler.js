@@ -39,18 +39,21 @@ module.exports = socket => {
             password: '',
             players: [],
             started: false,
-            full: false
+            full: false,
+            maxPlayers: 2
         };
         const room = await createNewRoom(roomData);
 
-        // Player (user)
+        // Player (user) — COLORS[0] = 'red'
         room.addPlayer('You');
 
         // Bot player
+        // 👇 CRITICAL FIX: COLORS order hai ['red','blue','green','yellow']
+        // Human 'red' (COLORS[0]) pe hai, uska diagonal-opposite corner 'green' (COLORS[2]) hai — blue (COLORS[1]) nahi
         const botPlayer = {
             sessionID: 'bot',
             name: displayName,
-            color: COLORS[1],
+            color: COLORS[2],
             ready: true,
             nowMoving: false,
             isBot: true,
