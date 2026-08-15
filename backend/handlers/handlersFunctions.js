@@ -139,10 +139,15 @@ const makeRandomMove = async roomId => {
     await updateRoom(room);
 };
 
-// ===== isMoveValid – UNCHANGED =====
+// ===== FIXED: isMoveValid =====
+// 🔧 FIX: pehle sirf color + turn-ownership check hota tha — move actually legal hai
+// ya nahi (pawn.canMove) ye kabhi check nahi hota tha. Ab server bhi verify karta hai,
+// sirf frontend ke canPawnMove.js pe trust nahi karta.
 const isMoveValid = (session, pawn, room) => {
     if (session.color !== pawn.color) return false;
     if (session.playerId !== room.getCurrentlyMovingPlayer()._id.toString()) return false;
+    if (!room.rolledNumber) return false;
+    if (!pawn.canMove(room.rolledNumber)) return false;
     return true;
 };
 
