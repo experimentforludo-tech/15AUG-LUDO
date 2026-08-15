@@ -22,7 +22,16 @@ module.exports = socket => {
     };
 
     const handleCreateRoom = async data => {
-        await createNewRoom(data);
+        // 👇 NEW: maxPlayers frontend se aata hai (2 ya 4), default 4 agar missing/invalid ho
+        const allowedCounts = [2, 4];
+        const maxPlayers = allowedCounts.includes(Number(data.maxPlayers)) ? Number(data.maxPlayers) : 4;
+
+        const roomData = {
+            ...data,
+            maxPlayers,
+        };
+
+        await createNewRoom(roomData);
         sendToOnePlayerRooms(socket.id, await getRooms());
     };
 
