@@ -1,5 +1,6 @@
 const { sendToPlayersRolledNumber, sendWinner } = require('../socket/emits');
 const Leaderboard = require('../models/leaderboard');
+const { SAFE_POSITIONS } = require('../utils/constants');
 
 const rollDice = () => Math.ceil(Math.random() * 6);
 
@@ -40,6 +41,11 @@ const evaluateMove = (room, pawn, newPos) => {
     // 5. Bonus for being in home stretch
     if (newPos > maxPos - 6) {
         score += 10;
+    }
+
+    // 6. NEW: Safe square pe land karna bot ke liye achha move hai
+    if (SAFE_POSITIONS.includes(newPos)) {
+        score += 12;
     }
 
     return score;
@@ -92,18 +98,27 @@ const updateLeaderboard = async (playerId, won) => {
     }
 };
 
-// ===== makeRandomMove – UPDATED =====
+// ===== makeRandomMove – REWRITTEN for safe-zone / 6 / block / capture rules =====
 const makeRandomMove = async roomId => {
     const { updateRoom, getRoom } = require('../services/roomService');
     const room = await getRoom(roomId);
     if (room.winner) return;
 
     if (room.rolledNumber === null) {
-        room.rolledNumber = rollDice();
-        sendToPlayersRolledNumber(room._id.toString(), room.rolledNumber);
+        const rolled = rollDice();
+        const streak = room.registerRoll(rolled);
+        sendToPlayersRolledNumber(room._id.toString(), rolled);
+
+        // 👇 NEW: teesra lagatar chhakka — koi move nahi milega, turn seedha agle player ko
+        if (streak >= 3) {
+            room.forfeitTurnForThreeSixes();
+            await updateRoom(room);
+            return;
+        }
     }
 
     const pawnsThatCanMove = room.getPawnsThatCanMove();
+    let gotCapture = false;
     if (pawnsThatCanMove.length > 0) {
         const currentPlayer = room.getCurrentlyMovingPlayer();
         let chosenPawn = null;
@@ -111,25 +126,26 @@ const makeRandomMove = async roomId => {
         // ===== FOR HUMANS (old random logic) – UNTOUCHED =====
         if (!currentPlayer.isBot) {
             chosenPawn = pawnsThatCanMove[Math.floor(Math.random() * pawnsThatCanMove.length)];
-        } 
-        // ===== FOR BOTS (new smart logic) =====
+        }
+        // ===== FOR BOTS (smart logic) =====
         else {
             const smartness = currentPlayer.botSmartness || 0.6;
             chosenPawn = getBestMove(room, pawnsThatCanMove, smartness);
         }
 
         if (chosenPawn) {
-            room.movePawn(chosenPawn);
+            gotCapture = room.movePawn(chosenPawn);
         }
     }
 
-    room.changeMovingPlayer();
+    // ===== NEW: safe-zone/6/capture rules ke hisaab se turn continue ya change hoga =====
+    room.resolveTurnAfterMove(gotCapture);
+
     const winner = room.getWinner();
     if (winner) {
         room.endGame(winner);
         sendWinner(room._id.toString(), winner);
 
-        // Update leaderboard (only if it's a bot game)
         const player = room.players.find(p => !p.isBot);
         if (player && room.players.some(p => p.isBot)) {
             const won = winner === player.color;
@@ -139,15 +155,16 @@ const makeRandomMove = async roomId => {
     await updateRoom(room);
 };
 
-// ===== FIXED: isMoveValid =====
-// 🔧 FIX: pehle sirf color + turn-ownership check hota tha — move actually legal hai
-// ya nahi (pawn.canMove) ye kabhi check nahi hota tha. Ab server bhi verify karta hai,
-// sirf frontend ke canPawnMove.js pe trust nahi karta.
+// ===== isMoveValid =====
+// 🔧 FIX: blocking check bhi add hua — pehle sirf canMove check hota tha,
+// ab blocked cell (2+ opponent pawns stacked) pe move server-side bhi reject hoga.
 const isMoveValid = (session, pawn, room) => {
     if (session.color !== pawn.color) return false;
     if (session.playerId !== room.getCurrentlyMovingPlayer()._id.toString()) return false;
     if (!room.rolledNumber) return false;
     if (!pawn.canMove(room.rolledNumber)) return false;
+    const newPos = pawn.getPositionAfterMove(room.rolledNumber);
+    if (room.isPositionBlocked(newPos, pawn.color)) return false;
     return true;
 };
 
