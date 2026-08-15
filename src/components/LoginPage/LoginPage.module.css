@@ -12,35 +12,39 @@
     box-sizing: border-box;
 }
 
-/* Each child - fixed width, no stretch */
+/* Each child - responsive width, not fixed */
 .container > * {
-    flex: 0 0 auto;
-    width: 460px;
-    max-width: 100%;
+    flex: 1 1 300px;
+    max-width: 460px;
+    min-width: 280px;
     box-sizing: border-box;
 }
 
 /* ===== Mobile ===== */
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
     .container {
         flex-direction: column;
         align-items: center;
-        padding: 15px;
-        gap: 15px;
-    }
-    .container > * {
-        width: 100%;
-        max-width: 480px;
-    }
-}
-
-@media (max-width: 600px) {
-    .container {
         padding: 10px;
         gap: 10px;
     }
     .container > * {
-        width: 100%;
+        flex: 0 1 100%;
         max-width: 100%;
+        min-width: 0;
+        width: 100%;
+    }
+}
+
+/* ===== Small Mobile (Keyboard open) ===== */
+@media (max-width: 480px) {
+    .container {
+        padding: 5px;
+        gap: 8px;
+    }
+    .container > * {
+        flex: 0 1 100%;
+        max-width: 100%;
+        width: 100%;
     }
 }
