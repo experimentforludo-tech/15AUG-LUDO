@@ -7,9 +7,9 @@ const PlayerSchema = new Schema({
     color: String,
     ready: { type: Boolean, default: false },
     nowMoving: { type: Boolean, default: false },
-    isBot: { type: Boolean, default: false },          // 👈 NEW
-    botLevel: { type: Number, default: 0 },            // 👈 NEW (0-4)
-    botSmartness: { type: Number, default: 0.6 }       // 👈 NEW (for easy/hard)
+    isBot: { type: Boolean, default: false },
+    botLevel: { type: Number, default: 0 },
+    botSmartness: { type: Number, default: 0.6 }
 });
 
 PlayerSchema.methods.changeReadyStatus = function () {
