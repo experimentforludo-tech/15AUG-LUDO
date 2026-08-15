@@ -3,48 +3,40 @@
     flex-direction: row;
     justify-content: center;
     align-items: flex-start;
-    gap: 20px;
+    gap: 16px;
     width: 100%;
-    max-width: 1100px;
+    max-width: 900px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 12px;
     flex-wrap: wrap;
     box-sizing: border-box;
 }
 
-/* Each child - responsive width, not fixed */
-.container > * {
-    flex: 1 1 300px;
-    max-width: 460px;
+/* Join box - smaller */
+.container > *:first-child {
+    flex: 0 1 380px;
+    max-width: 380px;
     min-width: 280px;
-    box-sizing: border-box;
 }
 
-/* ===== Mobile ===== */
-@media (max-width: 768px) {
+/* Host box - slightly larger */
+.container > *:last-child {
+    flex: 0 1 420px;
+    max-width: 420px;
+    min-width: 280px;
+}
+
+/* ===== Tablet & Mobile ===== */
+@media (max-width: 860px) {
     .container {
         flex-direction: column;
         align-items: center;
         padding: 10px;
-        gap: 10px;
+        gap: 12px;
     }
     .container > * {
-        flex: 0 1 100%;
-        max-width: 100%;
-        min-width: 0;
-        width: 100%;
-    }
-}
-
-/* ===== Small Mobile (Keyboard open) ===== */
-@media (max-width: 480px) {
-    .container {
-        padding: 5px;
-        gap: 8px;
-    }
-    .container > * {
-        flex: 0 1 100%;
-        max-width: 100%;
+        flex: 0 1 100% !important;
+        max-width: 100% !important;
         width: 100%;
     }
 }
