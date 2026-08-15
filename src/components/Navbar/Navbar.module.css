@@ -2,27 +2,35 @@
     display: flex;
     align-items: center;
     flex-direction: row;
+    flex-wrap: wrap;
     width: 100%;
+    max-width: 100%;
+    gap: 6px;
+    box-sizing: border-box;
 }
 .red {
-    margin-bottom: 50px;
+    margin-bottom: 10px;
     grid-column: 1;
     grid-row: 1;
+    justify-self: start;
 }
 .yellow {
-    margin-bottom: 50px;
+    margin-bottom: 10px;
     flex-flow: row-reverse;
     grid-column: 2;
     grid-row: 1;
+    justify-self: end;
 }
 .blue {
-    margin-top: 50px;
+    margin-top: 10px;
     grid-column: 1;
-    grid-row: 4;
+    grid-row: 3;
+    justify-self: start;
 }
 .green {
-    margin-top: 50px;
+    margin-top: 10px;
     flex-flow: row-reverse;
     grid-column: 2;
-    grid-row: 4;
+    grid-row: 3;
+    justify-self: end;
 }
