@@ -10,7 +10,11 @@ import getPositionAfterMove from './getPositionAfterMove';
 const NATIVE_SIZE = 460; // 👈 canvas internal drawing resolution — kabhi mat badalna, sab coordinates isi pe calibrated hain
 const MIN_PADDING = 15; // 👈 board ke chaaro taraf minimum gap (px)
 const RESERVED_FOR_NAVBAR = 190; // 👈 top+bottom navbar (name boxes + dice) ke liye approx space
-const TOUCH_RADIUS_CSS = 20; // 🔧 NEW: minimum finger-friendly tap radius, real CSS px me
+const TOUCH_RADIUS_CSS = 20; // 🔧 minimum finger-friendly tap radius, real CSS px me
+
+// ===== NEW: safe squares (backend constants.js ke SAFE_POSITIONS se match honi chahiye) =====
+// Tier 2 me isko ek shared constants file me move karenge taaki duplication na ho.
+const SAFE_POSITIONS = [16, 24, 29, 37, 42, 50, 55, 63];
 
 const Map = ({ pawns, nowMoving, rolledNumber }) => {
     const player = useContext(PlayerDataContext);
@@ -19,12 +23,8 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
 
     const [hintPawn, setHintPawn] = useState();
 
-    // ===== NEW: Responsive board size (device ke hisaab se) =====
     const [boardSize, setBoardSize] = useState(NATIVE_SIZE);
 
-    // 🔧 NEW: image cache — map + pawn images sirf ek baar load hote hain,
-    // uske baad reuse hote hain. Pehle har redraw pe `new Image()` bana ke
-    // src reload/redecode hota tha — isi se move ke baad flicker/jank aata tha.
     const imagesRef = useRef({ map: null, pawns: {} });
     const [assetsReady, setAssetsReady] = useState(false);
 
@@ -57,7 +57,6 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
         const computeBoardSize = () => {
             const maxWidth = window.innerWidth - MIN_PADDING * 2;
             const maxHeight = window.innerHeight - RESERVED_FOR_NAVBAR - MIN_PADDING * 2;
-            // Chhoti screen pe shrink karo, bada screen pe native size (460) se zyada mat karo — blur na ho
             const size = Math.max(220, Math.min(maxWidth, maxHeight, NATIVE_SIZE));
             setBoardSize(size);
         };
@@ -72,8 +71,6 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
         };
     }, []);
 
-    // 🔧 NEW: board jitna chhota hoga, logical radius utna bada rakho —
-    // taaki asli finger-tap area (~20 CSS px) har screen size pe roughly same rahe
     const getTouchRadius = () => TOUCH_RADIUS_CSS * (NATIVE_SIZE / boardSize);
 
     const paintPawn = (context, pawn) => {
@@ -87,9 +84,24 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
         return touchableArea;
     };
 
-    // 👇 CRITICAL FIX: cursor coordinates ko canvas ke internal resolution
-    // (460x460, ab dpr ke saath) ke hisaab se scale karna zaroori hai, kyunki
-    // display size (boardSize) aur internal resolution alag ho sakte hain
+    // ===== NEW: safe-zone markers draw karta hai board pe (chhoti golden ring) =====
+    const paintSafeZones = context => {
+        context.save();
+        context.fillStyle = 'rgba(255, 215, 0, 0.55)';
+        context.strokeStyle = 'rgba(120, 90, 0, 0.6)';
+        context.lineWidth = 1;
+        SAFE_POSITIONS.forEach(pos => {
+            const coords = positionMapCoords[pos];
+            if (!coords) return;
+            const { x, y } = coords;
+            context.beginPath();
+            context.arc(x, y, 6, 0, 2 * Math.PI);
+            context.fill();
+            context.stroke();
+        });
+        context.restore();
+    };
+
     const getScaledCoords = event => {
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
@@ -101,18 +113,20 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
         };
     };
 
+    // 🔧 UPDATED: canPawnMove ko ab `pawns` bhi diya jaata hai (blocking check ke liye)
     const handleCanvasClick = event => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         const { x: cursorX, y: cursorY } = getScaledCoords(event);
         for (const pawn of pawns) {
             if (ctx.isPointInPath(pawn.touchableArea, cursorX, cursorY)) {
-                if (canPawnMove(pawn, rolledNumber)) socket.emit('game:move', pawn._id);
+                if (canPawnMove(pawn, rolledNumber, pawns)) socket.emit('game:move', pawn._id);
             }
         }
         setHintPawn(null);
     };
 
+    // 🔧 UPDATED: canPawnMove ko ab `pawns` bhi diya jaata hai (blocking check ke liye)
     const handleMouseMove = event => {
         if (!nowMoving || !rolledNumber) return;
         const canvas = canvasRef.current;
@@ -123,7 +137,7 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
             if (
                 ctx.isPointInPath(pawn.touchableArea, x, y) &&
                 player.color === pawn.color &&
-                canPawnMove(pawn, rolledNumber)
+                canPawnMove(pawn, rolledNumber, pawns)
             ) {
                 const pawnPosition = getPositionAfterMove(pawn, rolledNumber);
                 if (pawnPosition) {
@@ -137,9 +151,6 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
         setHintPawn(null);
     };
 
-    // 🔧 NEW: touchscreens par real "hover" nahi hota, isliye mousemove-based
-    // hint kabhi trigger nahi hota tha mobile pe. Ab tap-and-hold (touchstart) pe
-    // wahi ghost-pawn preview dikhega jo desktop pe mouse-hover se dikhta hai.
     const handleTouchStart = event => {
         if (!nowMoving || !rolledNumber || event.touches.length === 0) return;
         const touch = event.touches[0];
@@ -154,8 +165,6 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
 
-            // 🔧 NEW: backing-store resolution ko devicePixelRatio ke hisaab se
-            // badhaya, taaki retina/high-DPI phones pe board aur pawns blurry na dikhein
             const dpr = window.devicePixelRatio || 1;
             const targetWidth = NATIVE_SIZE * dpr;
             const targetHeight = NATIVE_SIZE * dpr;
@@ -167,6 +176,7 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
 
             ctx.clearRect(0, 0, NATIVE_SIZE, NATIVE_SIZE);
             ctx.drawImage(imagesRef.current.map, 0, 0, NATIVE_SIZE, NATIVE_SIZE);
+            paintSafeZones(ctx); // 👈 NEW: map ke upar, pawns se pehle safe-zone markers
             pawns.forEach((pawn, index) => {
                 pawns[index].touchableArea = paintPawn(ctx, pawn);
             });
