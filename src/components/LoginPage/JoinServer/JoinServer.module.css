@@ -1,10 +1,10 @@
 .serversTableContainer {
     display: flex;
     overflow: auto;
-    height: 380px;
+    height: 300px;
     width: 100%;
     border-radius: 4px;
-    background: rgba(0, 0, 0, 0.12);
+    background: rgba(0, 0, 0, 0.1);
 }
 
 .refresh {
@@ -12,9 +12,9 @@
     margin-left: auto;
     justify-content: center;
     align-items: center;
-    width: 36px;
-    height: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 4px;
     cursor: pointer;
     transition: background 0.2s;
@@ -26,18 +26,18 @@
 }
 
 .refresh > img {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
 }
 
 /* ===== Mobile ===== */
 @media (max-width: 600px) {
     .serversTableContainer {
-        height: 260px;
+        height: 200px;
     }
     .refresh {
-        width: 30px;
-        height: 30px;
+        width: 26px;
+        height: 26px;
     }
     .refresh > img {
         width: 14px;
