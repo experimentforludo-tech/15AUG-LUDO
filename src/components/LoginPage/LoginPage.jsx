@@ -4,9 +4,11 @@ import JoinServer from './JoinServer/JoinServer';
 import styles from './LoginPage.module.css';
 
 const LoginPage = ({ setRedirect }) => {
-    // 🔥 IMPORTANT: Jab login page open ho, redirect false karo
+    // 🔥 CRITICAL FIX: Jaise hi login page open ho, redirect ko false karo
     useEffect(() => {
-        setRedirect(false);
+        if (setRedirect) {
+            setRedirect(false);
+        }
     }, [setRedirect]);
 
     return (
