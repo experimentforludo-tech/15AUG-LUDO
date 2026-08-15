@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import ReactLoading from 'react-loading';
 import Gameboard from './components/Gameboard/Gameboard';
 import LoginPage from './components/LoginPage/LoginPage';
+import LandingPage from './components/LandingPage/LandingPage';
 
 export const PlayerDataContext = createContext();
 export const SocketContext = createContext();
@@ -49,7 +50,6 @@ function App() {
 
         setPlayerSocket(socket);
 
-        // ===== On-Screen Status for Mobile =====
         const statusDiv = document.createElement('div');
         statusDiv.id = 'socket-status';
         statusDiv.style.cssText = `
@@ -82,54 +82,33 @@ function App() {
         <SocketContext.Provider value={playerSocket}>
             <Router>
                 <Routes>
+                    <Route path="/" element={<LandingPage />} />
+
                     <Route
-                        exact
-                        path='/'
-                        Component={() => {
-                            if (redirect) {
-                                return <Navigate to='/game' />;
-                            } else if (playerSocket) {
-                                return <LoginPage />;
-                            } else {
-                                return (
-                                    <div style={{ textAlign: 'center', color: 'white' }}>
-                                        <ReactLoading type='spinningBubbles' color='white' height={100} width={100} />
-                                        <p style={{ marginTop: '20px', fontFamily: 'monospace' }}>{connectionStatus}</p>
-                                    </div>
-                                );
-                            }
-                        }}
+                        path="/login"
+                        element={
+                            redirect ? <Navigate to="/game" /> : 
+                            playerSocket ? <LoginPage /> : 
+                            (
+                                <div style={{ textAlign: 'center', color: 'white' }}>
+                                    <ReactLoading type='spinningBubbles' color='white' height={100} width={100} />
+                                    <p style={{ marginTop: '20px', fontFamily: 'monospace' }}>{connectionStatus}</p>
+                                </div>
+                            )
+                        }
                     />
+
                     <Route
-                        path='/login'
-                        Component={() => {
-                            if (redirect) {
-                                return <Navigate to='/game' />;
-                            } else if (playerSocket) {
-                                return <LoginPage />;
-                            } else {
-                                return (
-                                    <div style={{ textAlign: 'center', color: 'white' }}>
-                                        <ReactLoading type='spinningBubbles' color='white' height={100} width={100} />
-                                        <p style={{ marginTop: '20px', fontFamily: 'monospace' }}>{connectionStatus}</p>
-                                    </div>
-                                );
-                            }
-                        }}
-                    />
-                    <Route
-                        path='/game'
-                        Component={() => {
-                            if (playerData) {
-                                return (
-                                    <PlayerDataContext.Provider value={playerData}>
-                                        <Gameboard />
-                                    </PlayerDataContext.Provider>
-                                );
-                            } else {
-                                return <Navigate to='/login' />;
-                            }
-                        }}
+                        path="/game"
+                        element={
+                            playerData ? (
+                                <PlayerDataContext.Provider value={playerData}>
+                                    <Gameboard />
+                                </PlayerDataContext.Provider>
+                            ) : (
+                                <Navigate to="/login" />
+                            )
+                        }
                     />
                 </Routes>
             </Router>
