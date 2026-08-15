@@ -9,9 +9,10 @@ const AddServer = () => {
     const socket = useContext(SocketContext);
     const [isPrivate, setIsPrivate] = useState(false);
     const [isIncorrect, setIsIncorrect] = useState(false);
+    const [maxPlayers, setMaxPlayers] = useState(4);
     const serverName = useInput('');
     const password = useInput('');
-    
+
     // ===== DEBUG STATE =====
     const [debugLogs, setDebugLogs] = useState([]);
     const [socketStatus, setSocketStatus] = useState('Checking...');
@@ -25,26 +26,26 @@ const AddServer = () => {
         if (socket) {
             setSocketStatus('✅ Connected');
             addDebugLog('Socket connected successfully');
-            
+
             socket.on('connect_error', (err) => {
                 setSocketStatus('❌ Error');
                 addDebugLog(`Socket error: ${err.message}`, true);
             });
-            
+
             socket.on('connect', () => {
                 setSocketStatus('✅ Connected');
                 addDebugLog('Socket reconnected');
             });
-            
+
             socket.on('room:create', (data) => {
                 addDebugLog(`Room created: ${JSON.stringify(data)}`);
             });
-            
+
             // Error listeners
             socket.on('error:changeRoom', () => {
                 addDebugLog('❌ Error: Room full or started', true);
             });
-            
+
             socket.on('error:wrongPassword', () => {
                 addDebugLog('❌ Error: Wrong password', true);
             });
@@ -52,7 +53,7 @@ const AddServer = () => {
             setSocketStatus('❌ No socket');
             addDebugLog('Socket not available', true);
         }
-        
+
         return () => {
             socket?.off('connect_error');
             socket?.off('connect');
@@ -64,26 +65,27 @@ const AddServer = () => {
 
     const handleButtonClick = e => {
         e.preventDefault();
-        addDebugLog(`🔘 Host button clicked: "${serverName.value}"`);
-        
+        addDebugLog(`🔘 Host button clicked: "${serverName.value}" (${maxPlayers}P)`);
+
         if (!serverName.value) {
             setIsIncorrect(true);
             addDebugLog('❌ Server name is empty', true);
             return;
         }
-        
+
         const data = {
             name: serverName.value,
             password: password.value,
             private: isPrivate,
+            maxPlayers: maxPlayers,
         };
         addDebugLog(`📤 Emitting 'room:create': ${JSON.stringify(data)}`);
-        
+
         if (!socket) {
             addDebugLog('❌ Socket is null!', true);
             return;
         }
-        
+
         socket.emit('room:create', data);
         addDebugLog(`✅ 'room:create' emitted successfully`);
     };
@@ -102,13 +104,40 @@ const AddServer = () => {
                                 border: isIncorrect ? '1px solid red' : '1px solid white',
                             }}
                         />
+
+                        {/* ===== NEW: Player Count Selection ===== */}
+                        <div className={styles.privateContainer} style={{ gap: '16px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                <input
+                                    type='radio'
+                                    name='maxPlayers'
+                                    value={2}
+                                    checked={maxPlayers === 2}
+                                    onChange={() => setMaxPlayers(2)}
+                                    style={{ width: 'auto' }}
+                                />
+                                2 Players
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                                <input
+                                    type='radio'
+                                    name='maxPlayers'
+                                    value={4}
+                                    checked={maxPlayers === 4}
+                                    onChange={() => setMaxPlayers(4)}
+                                    style={{ width: 'auto' }}
+                                />
+                                4 Players
+                            </label>
+                        </div>
+
                         <div className={styles.privateContainer}>
                             <label>Private</label>
                             <Switch checked={isPrivate} color='primary' onChange={() => setIsPrivate(!isPrivate)} />
                         </div>
                         <input type='text' placeholder='password' disabled={!isPrivate} {...password} />
                         <button onClick={handleButtonClick}>Host</button>
-                        
+
                         {/* ===== DEBUG PANEL ===== */}
                         <div style={{
                             marginTop: '20px',
@@ -139,7 +168,7 @@ const AddServer = () => {
                                     ))
                                 )}
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setDebugLogs([])}
                                 style={{
                                     marginTop: '5px',
