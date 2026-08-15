@@ -83,12 +83,14 @@ function App() {
         <SocketContext.Provider value={playerSocket}>
             <Router>
                 <Routes>
+                    {/* ===== LANDING PAGE ===== */}
                     <Route path="/" element={<LandingPage />} />
 
+                    {/* ===== LOGIN PAGE ===== */}
                     <Route
                         path="/login"
                         element={
-                            // ⚠️ CRITICAL FIX: Agar redirect true hai toh game pe bhejo, warna login page
+                            // 👇 CRITICAL FIX: redirect true hai toh game pe bhejo, warna login page
                             redirect ? 
                             <Navigate to="/game" /> : 
                             playerSocket ? 
@@ -102,6 +104,7 @@ function App() {
                         }
                     />
 
+                    {/* ===== GAME PAGE ===== */}
                     <Route
                         path="/game"
                         element={
