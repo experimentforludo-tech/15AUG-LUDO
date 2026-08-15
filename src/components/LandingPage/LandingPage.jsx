@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SocketContext } from '../../App';
 import './LandingPage.css';
@@ -6,6 +6,7 @@ import './LandingPage.css';
 const LandingPage = () => {
     const navigate = useNavigate();
     const socket = useContext(SocketContext);
+    const [joiningBot, setJoiningBot] = useState(false);
 
     useEffect(() => {
         if (socket) {
@@ -19,7 +20,6 @@ const LandingPage = () => {
 
     const handlePlayWithFriends = () => {
         console.log('🔘 Play with Friends clicked');
-        // 👇 DIRECT NAVIGATE TO LOGIN PAGE – NO REDIRECT ISSUE
         navigate('/login');
     };
 
@@ -27,7 +27,10 @@ const LandingPage = () => {
         console.log('🔘 Free Play clicked');
         if (socket) {
             console.log('📤 Emitting player:bot...');
+            setJoiningBot(true);
             socket.emit('player:bot');
+            // Navigation ab yahan manually nahi karni — App.js ka global
+            // 'player:data' listener roomId aate hi khud /game pe le jayega
         } else {
             console.error('❌ Socket not available!');
             alert('Backend not connected! Please refresh and try again.');
@@ -56,22 +59,24 @@ const LandingPage = () => {
                 </div>
 
                 {/* ===== FREE PLAY (BOT) ===== */}
-                <div 
-                    className="card card--purple" 
+                <div
+                    className="card card--purple"
                     tabIndex="0"
-                    onClick={handleFreePlay}
-                    style={{ cursor: 'pointer' }}
+                    onClick={joiningBot ? undefined : handleFreePlay}
+                    style={{ cursor: joiningBot ? 'default' : 'pointer', opacity: joiningBot ? 0.6 : 1 }}
                 >
                     <span className="tag tag--purple">No Entry Fee</span>
                     <div className="row-purple">
-                        <div className="title-purple">free play</div>
+                        <div className="title-purple">
+                            {joiningBot ? 'joining...' : 'free play'}
+                        </div>
                     </div>
                     <div className="sub-purple">Practice Mode · Unlimited</div>
                 </div>
 
                 {/* ===== PLAY WITH FRIENDS (MULTIPLAYER) ===== */}
-                <div 
-                    className="card card--green" 
+                <div
+                    className="card card--green"
                     tabIndex="0"
                     onClick={handlePlayWithFriends}
                     style={{ cursor: 'pointer' }}
