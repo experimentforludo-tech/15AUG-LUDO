@@ -12,7 +12,7 @@ const RoomSchema = new mongoose.Schema({
     createDate: { type: Date, default: Date.now },
     started: { type: Boolean, default: false },
     full: { type: Boolean, default: false },
-    maxPlayers: { type: Number, default: 4 }, // 👈 NEW: 2 ya 4
+    maxPlayers: { type: Number, default: 4 },
     nextMoveTime: Number,
     rolledNumber: Number,
     players: [PlayerSchema],
@@ -64,7 +64,6 @@ RoomSchema.methods.changeMovingPlayer = function () {
     timeoutManager.clear(this._id.toString());
 
     const nextPlayer = this.players[nextIndex];
-    // Bot gets 1 second, human gets 15 seconds
     const delay = nextPlayer.isBot ? 1000 : MOVE_TIME;
     timeoutManager.set(makeRandomMove, delay, this._id.toString());
 };
@@ -132,7 +131,6 @@ RoomSchema.methods.getWinner = function () {
 
 // ===== IS FULL =====
 RoomSchema.methods.isFull = function () {
-    // 👇 UPDATED: ab fixed 4 ki jagah room ke apne maxPlayers (2 ya 4) ke against check hota hai
     if (this.players.length >= this.maxPlayers) {
         this.full = true;
     }
@@ -145,13 +143,17 @@ RoomSchema.methods.getPlayer = function (playerId) {
 };
 
 // ===== ADD PLAYER =====
+// 👇 CRITICAL FIX: color ab room ke maxPlayers ke hisaab se decide hota hai.
+// 2-player room → [red, green] (diagonal opposite corners)
+// 4-player room → [red, blue, green, yellow] (sabhi 4 corners, normal sequence)
 RoomSchema.methods.addPlayer = function (name, id) {
     if (this.full) return;
+    const colorSequence = this.maxPlayers === 2 ? [COLORS[0], COLORS[2]] : COLORS;
     this.players.push({
         sessionID: id,
         name: name,
         ready: false,
-        color: COLORS[this.players.length],
+        color: colorSequence[this.players.length],
     });
 };
 
