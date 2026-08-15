@@ -1,32 +1,38 @@
 .roomName {
-    max-width: 150px;
+    max-width: 130px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: left !important;
 }
+
 .rooms > thead > tr :nth-child(2) {
     text-align: left;
 }
+
 .rooms > tbody > tr > td > img {
-    margin-right: 5px;
-    width: 20px;
-    height: 20px;
+    margin-right: 4px;
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
 }
 
 .rooms > th {
-    padding: 8px;
+    padding: 8px 6px;
     text-align: center;
-    height: 50px;
+    height: 38px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    font-weight: 500;
 }
+
 .rooms > tbody > tr > td {
-    padding: 4px;
+    padding: 6px 4px;
     text-align: center;
-    height: 50px;
-}
-.rooms > tbody > tr > td {
-    max-height: 50px;
-    height: 10px;
+    height: 42px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    vertical-align: middle;
 }
 
 .rooms {
@@ -36,8 +42,54 @@
 }
 
 .lastColumn {
-    width: 70px;
+    width: 60px;
 }
 .firstColumn {
-    width: 40px;
+    width: 30px;
+}
+
+.rooms > tbody > tr > td > button {
+    padding: 4px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.4);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.rooms > tbody > tr > td > button:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 600px) {
+    .rooms {
+        font-size: 11px;
+    }
+    .rooms > tbody > tr > td,
+    .rooms > thead > tr > th {
+        padding: 4px 3px;
+        height: 34px;
+        font-size: 11px;
+    }
+    .roomName {
+        max-width: 60px;
+        font-size: 10px;
+    }
+    .lastColumn {
+        width: 40px;
+    }
+    .firstColumn {
+        width: 22px;
+    }
+    .rooms > tbody > tr > td > button {
+        padding: 2px 6px;
+        font-size: 9px;
+    }
+    .rooms > tbody > tr > td > img {
+        width: 12px;
+        height: 12px;
+    }
 }
