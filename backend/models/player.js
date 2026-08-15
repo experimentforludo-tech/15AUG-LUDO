@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-
 const Schema = mongoose.Schema;
 
 const PlayerSchema = new Schema({
@@ -8,6 +7,9 @@ const PlayerSchema = new Schema({
     color: String,
     ready: { type: Boolean, default: false },
     nowMoving: { type: Boolean, default: false },
+    isBot: { type: Boolean, default: false },          // 👈 NEW
+    botLevel: { type: Number, default: 0 },            // 👈 NEW (0-4)
+    botSmartness: { type: Number, default: 0.6 }       // 👈 NEW (for easy/hard)
 });
 
 PlayerSchema.methods.changeReadyStatus = function () {
