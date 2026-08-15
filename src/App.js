@@ -41,6 +41,7 @@ function App() {
         });
 
         socket.on('player:data', data => {
+            console.log('📥 player:data received:', data);
             data = JSON.parse(data);
             setPlayerData(data);
             if (data.roomId != null) {
@@ -82,13 +83,12 @@ function App() {
         <SocketContext.Provider value={playerSocket}>
             <Router>
                 <Routes>
-                    {/* ===== LANDING PAGE ===== */}
                     <Route path="/" element={<LandingPage />} />
 
-                    {/* ===== LOGIN PAGE ===== */}
                     <Route
                         path="/login"
                         element={
+                            // ⚠️ CRITICAL FIX: Agar redirect true hai toh game pe bhejo, warna login page
                             redirect ? 
                             <Navigate to="/game" /> : 
                             playerSocket ? 
@@ -102,7 +102,6 @@ function App() {
                         }
                     />
 
-                    {/* ===== GAME PAGE ===== */}
                     <Route
                         path="/game"
                         element={
