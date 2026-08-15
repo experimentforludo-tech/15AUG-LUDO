@@ -8,6 +8,12 @@ import Overlay from '../Overlay/Overlay';
 import styles from './Gameboard.module.css';
 import trophyImage from '../../images/trophy.webp';
 
+// 👇 NEW: room ke maxPlayers ke hisaab se expected corner-colors
+const EXPECTED_COLORS = {
+    2: ['red', 'green'],
+    4: ['red', 'blue', 'green', 'yellow'],
+};
+
 const Gameboard = () => {
     const socket = useContext(SocketContext);
     const context = useContext(PlayerDataContext);
@@ -29,10 +35,18 @@ const Gameboard = () => {
         socket.on('room:data', data => {
             data = JSON.parse(data);
             if (data.players == null) return;
-            // Filling navbar with empty player nick container
-            while (data.players.length !== 4) {
-                data.players.push({ name: '...' });
-            }
+
+            // 👇 CRITICAL FIX: pehle hamesha 4 tak pad hota tha, chahe
+            // room 2-player ho ya 4-player. Ab room ke actual maxPlayers
+            // ke hisaab se sirf utne hi box banenge, aur unki position
+            // bhi color ke hisaab se correct rahegi (diagonal-opposite for 2P)
+            const maxPlayers = data.maxPlayers === 2 ? 2 : 4;
+            const expectedColors = EXPECTED_COLORS[maxPlayers];
+            const filledPlayers = expectedColors.map(color => {
+                const existing = data.players.find(p => p.color === color);
+                return existing || { name: 'Waiting...', color, ready: false };
+            });
+
             // Checks if client is currently moving player by session ID
             const nowMovingPlayer = data.players.find(player => player.nowMoving === true);
             if (nowMovingPlayer) {
@@ -44,9 +58,9 @@ const Gameboard = () => {
                 setMovingPlayer(nowMovingPlayer.color);
             }
             const currentPlayer = data.players.find(player => player._id === context.playerId);
-            setIsReady(currentPlayer.ready);
+            setIsReady(currentPlayer ? currentPlayer.ready : false);
             setRolledNumber(data.rolledNumber);
-            setPlayers(data.players);
+            setPlayers(filledPlayers);
             setPawns(data.pawns);
             setTime(data.nextMoveTime);
             setStarted(data.started);
