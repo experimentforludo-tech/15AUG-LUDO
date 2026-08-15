@@ -4,6 +4,7 @@
     align-items: center;
     justify-content: flex-start;
     width: 100%;
+    max-width: 100%;
     color: white;
     margin: 0;
     padding: 0;
@@ -46,7 +47,7 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0 0 4px 4px;
     box-sizing: border-box;
-    min-height: 80px;
+    min-height: 70px;
 }
 
 /* ===== Mobile ===== */
