@@ -35,6 +35,7 @@ const RoomSchema = new mongoose.Schema({
     },
 });
 
+// ===== BEAT PAWNS =====
 RoomSchema.methods.beatPawns = function (position, attackingPawnColor) {
     const pawnsOnPosition = this.pawns.filter(pawn => pawn.position === position);
     pawnsOnPosition.forEach(pawn => {
@@ -45,42 +46,54 @@ RoomSchema.methods.beatPawns = function (position, attackingPawnColor) {
     });
 };
 
+// ===== CHANGE MOVING PLAYER (UPDATED WITH BOT SUPPORT) =====
 RoomSchema.methods.changeMovingPlayer = function () {
     if (this.winner) return;
     const playerIndex = this.players.findIndex(player => player.nowMoving === true);
     this.players[playerIndex].nowMoving = false;
+    let nextIndex;
     if (playerIndex + 1 === this.players.length) {
-        this.players[0].nowMoving = true;
+        nextIndex = 0;
     } else {
-        this.players[playerIndex + 1].nowMoving = true;
+        nextIndex = playerIndex + 1;
     }
+    this.players[nextIndex].nowMoving = true;
     this.nextMoveTime = Date.now() + MOVE_TIME;
     this.rolledNumber = null;
     timeoutManager.clear(this._id.toString());
-    timeoutManager.set(makeRandomMove, MOVE_TIME, this._id.toString());
+
+    const nextPlayer = this.players[nextIndex];
+    // Bot gets 1 second, human gets 15 seconds
+    const delay = nextPlayer.isBot ? 1000 : MOVE_TIME;
+    timeoutManager.set(makeRandomMove, delay, this._id.toString());
 };
 
+// ===== MOVE PAWN =====
 RoomSchema.methods.movePawn = function (pawn) {
     const newPositionOfMovedPawn = pawn.getPositionAfterMove(this.rolledNumber);
     this.changePositionOfPawn(pawn, newPositionOfMovedPawn);
     this.beatPawns(newPositionOfMovedPawn, pawn.color);
 };
 
+// ===== GET PAWNS THAT CAN MOVE =====
 RoomSchema.methods.getPawnsThatCanMove = function () {
     const movingPlayer = this.getCurrentlyMovingPlayer();
     const playerPawns = this.getPlayerPawns(movingPlayer.color);
     return playerPawns.filter(pawn => pawn.canMove(this.rolledNumber));
 };
 
+// ===== CHANGE POSITION OF PAWN =====
 RoomSchema.methods.changePositionOfPawn = function (pawn, newPosition) {
     const pawnIndex = this.getPawnIndex(pawn._id);
     this.pawns[pawnIndex].position = newPosition;
 };
 
+// ===== CAN START GAME =====
 RoomSchema.methods.canStartGame = function () {
     return this.players.filter(player => player.ready).length >= 2;
 };
 
+// ===== START GAME =====
 RoomSchema.methods.startGame = function () {
     this.started = true;
     this.nextMoveTime = Date.now() + MOVE_TIME;
@@ -89,6 +102,7 @@ RoomSchema.methods.startGame = function () {
     timeoutManager.set(makeRandomMove, MOVE_TIME, this._id.toString());
 };
 
+// ===== END GAME =====
 RoomSchema.methods.endGame = function (winner) {
     timeoutManager.clear(this._id.toString());
     this.rolledNumber = null;
@@ -98,6 +112,7 @@ RoomSchema.methods.endGame = function (winner) {
     this.save();
 };
 
+// ===== GET WINNER =====
 RoomSchema.methods.getWinner = function () {
     if (this.pawns.filter(pawn => pawn.color === 'red' && pawn.position === 73).length === 4) {
         return 'red';
@@ -114,6 +129,7 @@ RoomSchema.methods.getWinner = function () {
     return null;
 };
 
+// ===== IS FULL =====
 RoomSchema.methods.isFull = function () {
     if (this.players.length === 4) {
         this.full = true;
@@ -121,10 +137,12 @@ RoomSchema.methods.isFull = function () {
     return this.full;
 };
 
+// ===== GET PLAYER =====
 RoomSchema.methods.getPlayer = function (playerId) {
     return this.players.find(player => player._id.toString() === playerId.toString());
 };
 
+// ===== ADD PLAYER =====
 RoomSchema.methods.addPlayer = function (name, id) {
     if (this.full) return;
     this.players.push({
@@ -135,18 +153,22 @@ RoomSchema.methods.addPlayer = function (name, id) {
     });
 };
 
+// ===== GET PAWN INDEX =====
 RoomSchema.methods.getPawnIndex = function (pawnId) {
     return this.pawns.findIndex(pawn => pawn._id.toString() === pawnId.toString());
 };
 
+// ===== GET PAWN =====
 RoomSchema.methods.getPawn = function (pawnId) {
     return this.pawns.find(pawn => pawn._id.toString() === pawnId.toString());
 };
 
+// ===== GET PLAYER PAWNS =====
 RoomSchema.methods.getPlayerPawns = function (color) {
     return this.pawns.filter(pawn => pawn.color === color);
 };
 
+// ===== GET CURRENTLY MOVING PLAYER =====
 RoomSchema.methods.getCurrentlyMovingPlayer = function () {
     return this.players.find(player => player.nowMoving === true);
 };
