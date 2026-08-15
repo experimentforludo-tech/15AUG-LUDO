@@ -12,6 +12,7 @@ const RoomSchema = new mongoose.Schema({
     createDate: { type: Date, default: Date.now },
     started: { type: Boolean, default: false },
     full: { type: Boolean, default: false },
+    maxPlayers: { type: Number, default: 4 }, // 👈 NEW: 2 ya 4
     nextMoveTime: Number,
     rolledNumber: Number,
     players: [PlayerSchema],
@@ -131,7 +132,8 @@ RoomSchema.methods.getWinner = function () {
 
 // ===== IS FULL =====
 RoomSchema.methods.isFull = function () {
-    if (this.players.length === 4) {
+    // 👇 UPDATED: ab fixed 4 ki jagah room ke apne maxPlayers (2 ya 4) ke against check hota hai
+    if (this.players.length >= this.maxPlayers) {
         this.full = true;
     }
     return this.full;
