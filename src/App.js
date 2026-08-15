@@ -1,6 +1,6 @@
 import React, { useEffect, useState, createContext } from 'react';
 import { io } from 'socket.io-client';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import ReactLoading from 'react-loading';
 import Gameboard from './components/Gameboard/Gameboard';
 import LoginPage from './components/LoginPage/LoginPage';
@@ -9,17 +9,80 @@ import LandingPage from './components/LandingPage/LandingPage';
 export const PlayerDataContext = createContext();
 export const SocketContext = createContext();
 
-function App() {
+// 👇 Router ke andar rehta hai isliye useNavigate use kar sakta hai
+function AppRoutes({ playerSocket, connectionStatus }) {
     const [playerData, setPlayerData] = useState();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!playerSocket) return;
+
+        const handlePlayerData = (data) => {
+            console.log('📥 player:data received:', data);
+            data = JSON.parse(data);
+            setPlayerData(data);
+
+            // 👇 CRITICAL FIX: chahe user kisi bhi page pe ho (landing/login),
+            // roomId aate hi seedha /game pe navigate — koi stale flag nahi
+            if (data.roomId != null) {
+                console.log('➡️ Navigating to /game');
+                navigate('/game');
+            }
+        };
+
+        playerSocket.on('player:data', handlePlayerData);
+
+        return () => {
+            playerSocket.off('player:data', handlePlayerData);
+        };
+    }, [playerSocket, navigate]);
+
+    return (
+        <Routes>
+            {/* ===== LANDING PAGE ===== */}
+            <Route path="/" element={<LandingPage />} />
+
+            {/* ===== LOGIN PAGE ===== */}
+            <Route
+                path="/login"
+                element={
+                    playerSocket ? (
+                        <LoginPage />
+                    ) : (
+                        <div style={{ textAlign: 'center', color: 'white' }}>
+                            <ReactLoading type='spinningBubbles' color='white' height={100} width={100} />
+                            <p style={{ marginTop: '20px', fontFamily: 'monospace' }}>{connectionStatus}</p>
+                        </div>
+                    )
+                }
+            />
+
+            {/* ===== GAME PAGE ===== */}
+            <Route
+                path="/game"
+                element={
+                    playerData ? (
+                        <PlayerDataContext.Provider value={playerData}>
+                            <Gameboard />
+                        </PlayerDataContext.Provider>
+                    ) : (
+                        <Navigate to="/login" />
+                    )
+                }
+            />
+        </Routes>
+    );
+}
+
+function App() {
     const [playerSocket, setPlayerSocket] = useState();
-    const [redirect, setRedirect] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState('Connecting...');
 
     useEffect(() => {
         const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080';
         console.log('🔗 Connecting to:', BACKEND_URL);
-        
-        const socket = io(BACKEND_URL, { 
+
+        const socket = io(BACKEND_URL, {
             withCredentials: true,
             transports: ['websocket', 'polling'],
             timeout: 10000
@@ -38,15 +101,6 @@ function App() {
         socket.on('disconnect', () => {
             console.log('⚠️ Socket disconnected');
             setConnectionStatus('⚠️ Disconnected');
-        });
-
-        socket.on('player:data', data => {
-            console.log('📥 player:data received:', data);
-            data = JSON.parse(data);
-            setPlayerData(data);
-            if (data.roomId != null) {
-                setRedirect(true);
-            }
         });
 
         setPlayerSocket(socket);
@@ -82,42 +136,7 @@ function App() {
     return (
         <SocketContext.Provider value={playerSocket}>
             <Router>
-                <Routes>
-                    {/* ===== LANDING PAGE ===== */}
-                    <Route path="/" element={<LandingPage />} />
-
-                    {/* ===== LOGIN PAGE ===== */}
-                    <Route
-                        path="/login"
-                        element={
-                            // 👇 CRITICAL FIX: redirect true hai toh game pe bhejo, warna login page
-                            redirect ? 
-                            <Navigate to="/game" /> : 
-                            playerSocket ? 
-                            <LoginPage setRedirect={setRedirect} /> : 
-                            (
-                                <div style={{ textAlign: 'center', color: 'white' }}>
-                                    <ReactLoading type='spinningBubbles' color='white' height={100} width={100} />
-                                    <p style={{ marginTop: '20px', fontFamily: 'monospace' }}>{connectionStatus}</p>
-                                </div>
-                            )
-                        }
-                    />
-
-                    {/* ===== GAME PAGE ===== */}
-                    <Route
-                        path="/game"
-                        element={
-                            playerData ? (
-                                <PlayerDataContext.Provider value={playerData}>
-                                    <Gameboard />
-                                </PlayerDataContext.Provider>
-                            ) : (
-                                <Navigate to="/login" />
-                            )
-                        }
-                    />
-                </Routes>
+                <AppRoutes playerSocket={playerSocket} connectionStatus={connectionStatus} />
             </Router>
         </SocketContext.Provider>
     );
