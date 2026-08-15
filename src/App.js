@@ -12,7 +12,7 @@ export const SocketContext = createContext();
 function App() {
     const [playerData, setPlayerData] = useState();
     const [playerSocket, setPlayerSocket] = useState();
-    const [redirect, setRedirect] = useState();
+    const [redirect, setRedirect] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState('Connecting...');
 
     useEffect(() => {
@@ -82,13 +82,17 @@ function App() {
         <SocketContext.Provider value={playerSocket}>
             <Router>
                 <Routes>
+                    {/* ===== LANDING PAGE ===== */}
                     <Route path="/" element={<LandingPage />} />
 
+                    {/* ===== LOGIN PAGE ===== */}
                     <Route
                         path="/login"
                         element={
-                            redirect ? <Navigate to="/game" /> : 
-                            playerSocket ? <LoginPage /> : 
+                            redirect ? 
+                            <Navigate to="/game" /> : 
+                            playerSocket ? 
+                            <LoginPage setRedirect={setRedirect} /> : 
                             (
                                 <div style={{ textAlign: 'center', color: 'white' }}>
                                     <ReactLoading type='spinningBubbles' color='white' height={100} width={100} />
@@ -98,6 +102,7 @@ function App() {
                         }
                     />
 
+                    {/* ===== GAME PAGE ===== */}
                     <Route
                         path="/game"
                         element={
