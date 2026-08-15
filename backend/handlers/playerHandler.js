@@ -45,7 +45,9 @@ module.exports = socket => {
         const room = await createNewRoom(roomData);
 
         // Player (user) — COLORS[0] = 'red'
-        room.addPlayer('You');
+        // 🔧 FIX: req.session.id ab pass ho raha hai taaki player.sessionID set ho
+        // (isse leaderboard update sahi player ke record ko target karega, 'anonymous' ko nahi)
+        room.addPlayer('You', req.session.id);
 
         // Bot player
         // 👇 CRITICAL FIX: COLORS order hai ['red','blue','green','yellow']
@@ -104,9 +106,10 @@ module.exports = socket => {
         await updateRoom(room);
     };
 
-    // ===== EXISTING: addPlayerToExistingRoom (UNCHANGED) =====
+    // ===== FIXED: addPlayerToExistingRoom =====
+    // 🔧 FIX: req.session.id ab addPlayer ko pass ho raha hai (pehle sessionID hamesha undefined rehta tha)
     const addPlayerToExistingRoom = async (room, data) => {
-        room.addPlayer(data.name);
+        room.addPlayer(data.name, req.session.id);
         if (room.isFull()) {
             room.startGame();
         }
@@ -114,13 +117,18 @@ module.exports = socket => {
         reloadSession(room);
     };
 
-    // ===== EXISTING: reloadSession (UNCHANGED) =====
+    // ===== FIXED: reloadSession =====
+    // 🔧 FIX: pehle `COLORS[room.players.length - 1]` use hota tha, jo sirf 4-player
+    // rooms (sequential red/blue/green/yellow) ke liye sahi tha. 2-player rooms me
+    // room.addPlayer() color [red, green] assign karta hai, isliye ab hum wahi color
+    // seedha newly-added player object se read kar rahe hain — koi index-guessing nahi.
     const reloadSession = room => {
         req.session.reload(err => {
             if (err) return socket.disconnect();
+            const newPlayer = room.players[room.players.length - 1];
             req.session.roomId = room._id.toString();
-            req.session.playerId = room.players[room.players.length - 1]._id.toString();
-            req.session.color = COLORS[room.players.length - 1];
+            req.session.playerId = newPlayer._id.toString();
+            req.session.color = newPlayer.color;
             req.session.save();
             socket.join(room._id.toString());
             socket.emit('player:data', JSON.stringify(req.session));
