@@ -1,5 +1,5 @@
 .roomName {
-    max-width: 130px;
+    max-width: 110px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -11,27 +11,27 @@
 }
 
 .rooms > tbody > tr > td > img {
-    margin-right: 4px;
-    width: 18px;
-    height: 18px;
+    margin-right: 3px;
+    width: 14px;
+    height: 14px;
     vertical-align: middle;
 }
 
 .rooms > th {
-    padding: 8px 6px;
+    padding: 6px 4px;
     text-align: center;
-    height: 38px;
-    font-size: 13px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    height: 30px;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     font-weight: 500;
 }
 
 .rooms > tbody > tr > td {
-    padding: 6px 4px;
+    padding: 4px 3px;
     text-align: center;
-    height: 42px;
-    font-size: 13px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    height: 34px;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     vertical-align: middle;
 }
 
@@ -42,19 +42,19 @@
 }
 
 .lastColumn {
-    width: 60px;
+    width: 50px;
 }
 .firstColumn {
-    width: 30px;
+    width: 24px;
 }
 
 .rooms > tbody > tr > td > button {
-    padding: 4px 12px;
-    font-size: 12px;
-    border-radius: 4px;
+    padding: 2px 10px;
+    font-size: 11px;
+    border-radius: 3px;
     background: rgba(0, 0, 0, 0.4);
     color: white;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     cursor: pointer;
     transition: background 0.2s;
 }
@@ -66,30 +66,30 @@
 /* ===== Mobile ===== */
 @media (max-width: 600px) {
     .rooms {
-        font-size: 11px;
+        font-size: 10px;
     }
     .rooms > tbody > tr > td,
     .rooms > thead > tr > th {
-        padding: 4px 3px;
-        height: 34px;
-        font-size: 11px;
-    }
-    .roomName {
-        max-width: 60px;
+        padding: 3px 2px;
+        height: 28px;
         font-size: 10px;
     }
-    .lastColumn {
-        width: 40px;
-    }
-    .firstColumn {
-        width: 22px;
-    }
-    .rooms > tbody > tr > td > button {
-        padding: 2px 6px;
+    .roomName {
+        max-width: 50px;
         font-size: 9px;
     }
+    .lastColumn {
+        width: 36px;
+    }
+    .firstColumn {
+        width: 18px;
+    }
+    .rooms > tbody > tr > td > button {
+        padding: 1px 6px;
+        font-size: 8px;
+    }
     .rooms > tbody > tr > td > img {
-        width: 12px;
-        height: 12px;
+        width: 10px;
+        height: 10px;
     }
 }
