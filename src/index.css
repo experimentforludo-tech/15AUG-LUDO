@@ -8,11 +8,19 @@ body {
     );
     overflow: hidden;
 }
+
+/* 🔧 FIX: pehle do alag #root rules the (duplicate selector, confusing) —
+   ek me merge kiya. height ab 100vh + 100dvh dono set hai: 100vh fallback
+   purane browsers ke liye, 100dvh (dynamic viewport height) usko override
+   karega jaha support hai — isse mobile Safari/Chrome ka address-bar
+   show/hide hone pe content jump/cut-off hona band hoga. */
 #root {
     display: flex;
-    justify-content: center;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
 }
 
@@ -25,34 +33,10 @@ canvas {
     flex-direction: row;
 }
 
-.timer {
-    background-color: darkblue;
-    color: white;
-    position: relative;
-    bottom: 60px;
-    left: 82px;
-    border: 1px solid white;
-    padding: 1px;
-    width: 30px;
-    height: 20px;
-    border-radius: 5px;
-}
-.overlay {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    opacity: 0.9;
-    animation: timerAnimation 15s linear infinite;
-    transition-duration: 15s;
-}
-#root {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
+/* 🔧 REMOVED: .timer class kahin bhi use nahi ho raha (koi component
+   className="timer" reference nahi karta — timer UI ab AnimatedOverlay
+   ring se hota hai). Dead/unused CSS tha, hardcoded px positioning
+   (bottom:60px, left:82px) bhi responsive nahi tha, isliye hata diya. */
 
 /* ===== UPDATED: Responsive container (pehle fixed-px tha, ab device-size ke hisaab se) ===== */
 .container {
@@ -64,7 +48,9 @@ canvas {
     width: 100%;
     max-width: 100vw;
     height: 100vh;
+    height: 100dvh; /* 🔧 FIX: dynamic viewport height, mobile address-bar issue */
     max-height: 100vh;
+    max-height: 100dvh; /* 🔧 FIX */
     box-sizing: border-box;
     padding: 15px; /* 👈 poore container ke chaaro taraf minimum 15px */
     row-gap: 8px;
@@ -153,6 +139,7 @@ button:hover {
     justify-content: center;
     width: 100%;
     height: 100vh;
+    height: 100dvh; /* 🔧 FIX: dynamic viewport height */
     text-align: center;
     padding: 20px;
     box-sizing: border-box;
