@@ -1,9 +1,12 @@
-const { getRoom, updateRoom } = require('../services/roomService');
+const { getRoom, updateRoom, createNewRoom } = require('../services/roomService');
 const { COLORS } = require('../utils/constants');
+const { getBotName, getBotLevel, getBotSmartness } = require('../models/botManager');
+const Leaderboard = require('../models/leaderboard');
 
 module.exports = socket => {
     const req = socket.request;
 
+    // ===== EXISTING: handleLogin (UNCHANGED) =====
     const handleLogin = async data => {
         const room = await getRoom(data.roomId);
         if (room.isFull()) return socket.emit('error:changeRoom');
@@ -12,6 +15,74 @@ module.exports = socket => {
         addPlayerToExistingRoom(room, data);
     };
 
+    // ===== NEW: Bot mode =====
+    const handleBotLogin = async () => {
+        // Get or create player stats
+        let stats = await Leaderboard.findOne({ playerId: req.session.id });
+        if (!stats) {
+            stats = new Leaderboard({
+                playerId: req.session.id,
+                playerName: 'Player'
+            });
+            await stats.save();
+        }
+
+        const botName = getBotName();
+        const level = getBotLevel(stats);
+        const smartness = getBotSmartness(level);
+        const levelNames = ['Easy', 'Medium', 'Hard', 'Hard+', 'Legendary'];
+        const displayName = `${botName} (${levelNames[level]})`;
+
+        const roomData = {
+            name: `vs ${botName}`,
+            private: false,
+            password: '',
+            players: [],
+            started: false,
+            full: false
+        };
+        const room = await createNewRoom(roomData);
+
+        // Player (user)
+        room.addPlayer('You');
+
+        // Bot player
+        const botPlayer = {
+            sessionID: 'bot',
+            name: displayName,
+            color: COLORS[1],
+            ready: true,
+            nowMoving: false,
+            isBot: true,
+            botLevel: level,
+            botSmartness: smartness
+        };
+        room.players.push(botPlayer);
+
+        room.full = true;
+        room.started = true;
+        room.players[0].ready = true;
+        room.players[0].nowMoving = true;
+        room.players[1].ready = true;
+
+        // Store stats ID for later update
+        req.session._statsId = stats._id;
+
+        await updateRoom(room);
+
+        req.session.reload(err => {
+            if (err) return socket.disconnect();
+            req.session.roomId = room._id.toString();
+            req.session.playerId = room.players[0]._id.toString();
+            req.session.color = COLORS[0];
+            req.session.save();
+            socket.join(room._id.toString());
+            socket.emit('player:data', JSON.stringify(req.session));
+        });
+    };
+    // ============================
+
+    // ===== EXISTING: handleExit (UNCHANGED) =====
     const handleExit = async () => {
         req.session.reload(err => {
             if (err) return socket.disconnect();
@@ -20,6 +91,7 @@ module.exports = socket => {
         });
     };
 
+    // ===== EXISTING: handleReady (UNCHANGED) =====
     const handleReady = async () => {
         const room = await getRoom(req.session.roomId);
         room.getPlayer(req.session.playerId).changeReadyStatus();
@@ -29,6 +101,7 @@ module.exports = socket => {
         await updateRoom(room);
     };
 
+    // ===== EXISTING: addPlayerToExistingRoom (UNCHANGED) =====
     const addPlayerToExistingRoom = async (room, data) => {
         room.addPlayer(data.name);
         if (room.isFull()) {
@@ -38,7 +111,7 @@ module.exports = socket => {
         reloadSession(room);
     };
 
-    // Since it is not bound to an HTTP request, the session must be manually reloaded and saved
+    // ===== EXISTING: reloadSession (UNCHANGED) =====
     const reloadSession = room => {
         req.session.reload(err => {
             if (err) return socket.disconnect();
@@ -51,7 +124,9 @@ module.exports = socket => {
         });
     };
 
+    // ===== SOCKET EVENTS =====
     socket.on('player:login', handleLogin);
+    socket.on('player:bot', handleBotLogin);   // 👈 NEW
     socket.on('player:ready', handleReady);
     socket.on('player:exit', handleExit);
 };
