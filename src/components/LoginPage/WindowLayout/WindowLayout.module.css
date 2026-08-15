@@ -51,19 +51,37 @@
 }
 
 /* ===== Mobile ===== */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .container {
         max-width: 100%;
     }
     .title {
-        height: 38px;
+        height: 40px;
         padding: 0 10px;
     }
     .title > h1 {
-        font-size: 15px;
+        font-size: 16px;
     }
     .content {
-        padding: 12px 10px;
+        padding: 14px 12px;
         min-height: 80px;
+    }
+}
+
+/* ===== Small Mobile (Keyboard open) ===== */
+@media (max-width: 480px) {
+    .container {
+        max-width: 100%;
+    }
+    .title {
+        height: 36px;
+        padding: 0 8px;
+    }
+    .title > h1 {
+        font-size: 14px;
+    }
+    .content {
+        padding: 10px 8px;
+        min-height: 60px;
     }
 }
