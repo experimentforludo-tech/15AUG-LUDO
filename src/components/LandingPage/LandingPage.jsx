@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SocketContext } from '../../App';
 import './LandingPage.css';
@@ -7,15 +7,30 @@ const LandingPage = () => {
     const navigate = useNavigate();
     const socket = useContext(SocketContext);
 
+    useEffect(() => {
+        if (socket) {
+            console.log('✅ Socket available in LandingPage');
+            socket.on('connect', () => console.log('✅ Socket connected!'));
+            socket.on('connect_error', (err) => console.error('❌ Socket error:', err));
+        } else {
+            console.warn('⚠️ Socket not available in LandingPage');
+        }
+    }, [socket]);
+
     const handlePlayWithFriends = () => {
+        console.log('🔘 Play with Friends clicked');
+        // 👇 DIRECT NAVIGATE TO LOGIN PAGE – NO REDIRECT ISSUE
         navigate('/login');
     };
 
     const handleFreePlay = () => {
+        console.log('🔘 Free Play clicked');
         if (socket) {
+            console.log('📤 Emitting player:bot...');
             socket.emit('player:bot');
         } else {
-            alert('Backend not connected!');
+            console.error('❌ Socket not available!');
+            alert('Backend not connected! Please refresh and try again.');
         }
     };
 
@@ -40,6 +55,7 @@ const LandingPage = () => {
                     <div className="credit">@powered by Creative Mind 😁</div>
                 </div>
 
+                {/* ===== FREE PLAY (BOT) ===== */}
                 <div 
                     className="card card--purple" 
                     tabIndex="0"
@@ -53,6 +69,7 @@ const LandingPage = () => {
                     <div className="sub-purple">Practice Mode · Unlimited</div>
                 </div>
 
+                {/* ===== PLAY WITH FRIENDS (MULTIPLAYER) ===== */}
                 <div 
                     className="card card--green" 
                     tabIndex="0"
