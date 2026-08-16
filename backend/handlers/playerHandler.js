@@ -15,9 +15,8 @@ module.exports = socket => {
         addPlayerToExistingRoom(room, data);
     };
 
-    // ===== NEW: Bot mode =====
+    // ===== Bot mode (Free Play) — jaisa tha waisa hi =====
     const handleBotLogin = async () => {
-        // Get or create player stats
         let stats = await Leaderboard.findOne({ playerId: req.session.id });
         if (!stats) {
             stats = new Leaderboard({
@@ -44,14 +43,8 @@ module.exports = socket => {
         };
         const room = await createNewRoom(roomData);
 
-        // Player (user) — COLORS[0] = 'red'
-        // 🔧 FIX: req.session.id ab pass ho raha hai taaki player.sessionID set ho
-        // (isse leaderboard update sahi player ke record ko target karega, 'anonymous' ko nahi)
         room.addPlayer('You', req.session.id);
 
-        // Bot player
-        // 👇 CRITICAL FIX: COLORS order hai ['red','blue','green','yellow']
-        // Human 'red' (COLORS[0]) pe hai, uska diagonal-opposite corner 'green' (COLORS[2]) hai — blue (COLORS[1]) nahi
         const botPlayer = {
             sessionID: 'bot',
             name: displayName,
@@ -70,7 +63,6 @@ module.exports = socket => {
         room.players[0].nowMoving = true;
         room.players[1].ready = true;
 
-        // Store stats ID for later update
         req.session._statsId = stats._id;
 
         await updateRoom(room);
@@ -85,7 +77,6 @@ module.exports = socket => {
             socket.emit('player:data', JSON.stringify(req.session));
         });
     };
-    // ============================
 
     // ===== EXISTING: handleExit (UNCHANGED) =====
     const handleExit = async () => {
@@ -107,7 +98,6 @@ module.exports = socket => {
     };
 
     // ===== FIXED: addPlayerToExistingRoom =====
-    // 🔧 FIX: req.session.id ab addPlayer ko pass ho raha hai (pehle sessionID hamesha undefined rehta tha)
     const addPlayerToExistingRoom = async (room, data) => {
         room.addPlayer(data.name, req.session.id);
         if (room.isFull()) {
@@ -118,10 +108,6 @@ module.exports = socket => {
     };
 
     // ===== FIXED: reloadSession =====
-    // 🔧 FIX: pehle `COLORS[room.players.length - 1]` use hota tha, jo sirf 4-player
-    // rooms (sequential red/blue/green/yellow) ke liye sahi tha. 2-player rooms me
-    // room.addPlayer() color [red, green] assign karta hai, isliye ab hum wahi color
-    // seedha newly-added player object se read kar rahe hain — koi index-guessing nahi.
     const reloadSession = room => {
         req.session.reload(err => {
             if (err) return socket.disconnect();
@@ -137,7 +123,7 @@ module.exports = socket => {
 
     // ===== SOCKET EVENTS =====
     socket.on('player:login', handleLogin);
-    socket.on('player:bot', handleBotLogin);   // 👈 NEW
+    socket.on('player:bot', handleBotLogin);
     socket.on('player:ready', handleReady);
     socket.on('player:exit', handleExit);
 };
