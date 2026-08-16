@@ -102,22 +102,24 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
         context.restore();
     };
 
-    const getScaledCoords = event => {
+    const getScaledCoordsFromClient = (clientX, clientY) => {
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         return {
-            x: (event.clientX - rect.left) * scaleX,
-            y: (event.clientY - rect.top) * scaleY,
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY,
         };
     };
 
-    // 🔧 UPDATED: canPawnMove ko ab `pawns` bhi diya jaata hai (blocking check ke liye)
-    const handleCanvasClick = event => {
+    const getScaledCoords = event => getScaledCoordsFromClient(event.clientX, event.clientY);
+
+    // 🔧 UPDATED: ab client coords (mouse ya touch dono) le sakta hai — shared logic mouse-click aur tap ke beech
+    const tryMovePawnAt = (clientX, clientY) => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
-        const { x: cursorX, y: cursorY } = getScaledCoords(event);
+        const { x: cursorX, y: cursorY } = getScaledCoordsFromClient(clientX, clientY);
         for (const pawn of pawns) {
             if (ctx.isPointInPath(pawn.touchableArea, cursorX, cursorY)) {
                 if (canPawnMove(pawn, rolledNumber, pawns)) socket.emit('game:move', pawn._id);
@@ -127,11 +129,16 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
     };
 
     // 🔧 UPDATED: canPawnMove ko ab `pawns` bhi diya jaata hai (blocking check ke liye)
-    const handleMouseMove = event => {
+    const handleCanvasClick = event => {
+        tryMovePawnAt(event.clientX, event.clientY);
+    };
+
+    // 🔧 UPDATED: ab client coords accept karta hai (mouse move ya touch move dono se call hota hai)
+    const showHintAt = (clientX, clientY) => {
         if (!nowMoving || !rolledNumber) return;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
-        const { x, y } = getScaledCoords(event);
+        const { x, y } = getScaledCoordsFromClient(clientX, clientY);
         canvas.style.cursor = 'default';
         for (const pawn of pawns) {
             if (
@@ -151,10 +158,18 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
         setHintPawn(null);
     };
 
+    const handleMouseMove = event => showHintAt(event.clientX, event.clientY);
+
+    // 🔧 FIX: pehle sirf hint set hota tha aur actual move browser ke synthetic
+    // 'click' event pe depend karta tha — mobile pe ye unreliable/laggy tha.
+    // Ab touchstart pe hi seedha move try hota hai (tap = instant move), aur
+    // preventDefault se page scroll/zoom bhi block hoti hai jab board pe touch ho.
     const handleTouchStart = event => {
-        if (!nowMoving || !rolledNumber || event.touches.length === 0) return;
+        if (event.touches.length === 0) return;
         const touch = event.touches[0];
-        handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+        event.preventDefault();
+        showHintAt(touch.clientX, touch.clientY);
+        tryMovePawnAt(touch.clientX, touch.clientY);
     };
 
     useEffect(() => {
@@ -195,7 +210,7 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
             style={{
                 width: `${boardSize}px`,
                 height: `${boardSize}px`,
-                touchAction: 'manipulation',
+                touchAction: 'none', // 🔧 FIX: 'manipulation' se 'none' — ab board pe finger drag se scroll/zoom trigger nahi hoga
             }}
             ref={canvasRef}
             onClick={handleCanvasClick}
