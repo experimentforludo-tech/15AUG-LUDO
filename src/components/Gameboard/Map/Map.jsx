@@ -11,9 +11,11 @@ const NATIVE_SIZE = 460; // 👈 canvas internal drawing resolution — kabhi ma
 const MIN_PADDING = 15; // 👈 board ke chaaro taraf minimum gap (px)
 const RESERVED_FOR_NAVBAR = 190; // 👈 top+bottom navbar (name boxes + dice) ke liye approx space
 const TOUCH_RADIUS_CSS = 20; // 🔧 minimum finger-friendly tap radius, real CSS px me
+const STACK_SCALE = 0.82; // 🔧 stacked pawns thode chhote draw hote hain taaki cascade cell ke andar fit ho
+const CASCADE_STEP_X = 6; // 🔧 har "peechhe" wale pawn ka horizontal offset (px, native coords)
+const CASCADE_STEP_Y = -6; // 🔧 har "peechhe" wale pawn ka vertical offset — diagonal cascade (upar-daayein)
 
 // ===== NEW: safe squares (backend constants.js ke SAFE_POSITIONS se match honi chahiye) =====
-// Tier 2 me isko ek shared constants file me move karenge taaki duplication na ho.
 const SAFE_POSITIONS = [16, 24, 29, 37, 42, 50, 55, 63];
 
 const Map = ({ pawns, nowMoving, rolledNumber }) => {
@@ -22,11 +24,15 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
     const canvasRef = useRef(null);
 
     const [hintPawn, setHintPawn] = useState();
-
     const [boardSize, setBoardSize] = useState(NATIVE_SIZE);
 
     const imagesRef = useRef({ map: null, pawns: {} });
     const [assetsReady, setAssetsReady] = useState(false);
+
+    // ===== arrival-order tracking — batata hai kaunsa pawn kis order me apne current cell pe pahuncha =====
+    const arrivalOrderRef = useRef(new Map());
+    const arrivalCounterRef = useRef(0);
+    const lastKnownPositionRef = useRef(new Map());
 
     useEffect(() => {
         let cancelled = false;
@@ -71,20 +77,43 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
         };
     }, []);
 
+    // Jab bhi kisi pawn ka position badalta hai (ya pehli baar dikhta hai), uska arrival number update karo.
+    useEffect(() => {
+        pawns.forEach(pawn => {
+            const prevPosition = lastKnownPositionRef.current.get(pawn._id);
+            if (prevPosition !== pawn.position) {
+                arrivalCounterRef.current += 1;
+                arrivalOrderRef.current.set(pawn._id, arrivalCounterRef.current);
+                lastKnownPositionRef.current.set(pawn._id, pawn.position);
+            }
+        });
+    }, [pawns]);
+
+    // 🔧 NEW: pawns ko "front-to-back" order me deta hai — sabse recent-arrival (front, upar
+    // dikhne wala) sabse pehle. Tap/hint resolution isi order me check hota hai, taaki jo
+    // pawn visually upar/front dikh raha hai, wahi select ho — koi random wala nahi.
+    const getPawnsFrontToBack = () =>
+        [...pawns].sort(
+            (a, b) => (arrivalOrderRef.current.get(b._id) || 0) - (arrivalOrderRef.current.get(a._id) || 0)
+        );
+
     const getTouchRadius = () => TOUCH_RADIUS_CSS * (NATIVE_SIZE / boardSize);
 
-    const paintPawn = (context, pawn) => {
+    const paintPawn = (context, pawn, offset = { dx: 0, dy: 0 }, scale = 1) => {
         const { x, y } = positionMapCoords[pawn.position];
+        const drawX = x + offset.dx;
+        const drawY = y + offset.dy;
+        const width = 35 * scale;
+        const height = 30 * scale;
         const touchableArea = new Path2D();
-        touchableArea.arc(x, y, getTouchRadius(), 0, 2 * Math.PI);
+        touchableArea.arc(drawX, drawY, getTouchRadius() * scale, 0, 2 * Math.PI);
         const image = imagesRef.current.pawns[pawn.color];
         if (image && image.complete) {
-            context.drawImage(image, x - 17, y - 15, 35, 30);
+            context.drawImage(image, drawX - width / 2, drawY - height / 2, width, height);
         }
         return touchableArea;
     };
 
-    // ===== NEW: safe-zone markers draw karta hai board pe (chhoti golden ring) =====
     const paintSafeZones = context => {
         context.save();
         context.fillStyle = 'rgba(255, 215, 0, 0.55)';
@@ -113,34 +142,36 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
         };
     };
 
-    const getScaledCoords = event => getScaledCoordsFromClient(event.clientX, event.clientY);
-
-    // 🔧 UPDATED: ab client coords (mouse ya touch dono) le sakta hai — shared logic mouse-click aur tap ke beech
+    // 🔧 FIX: ab sirf APNE color ke pawns consider hote hain (pehle koi bhi color match ho jaata tha),
+    // aur front-to-back order me sirf PEHLA matching pawn move hota hai — fir turant return, baaki
+    // stack ke pawns ko touch bhi nahi kiya jaata. Isse ek tap = ek hi pawn move, guaranteed.
     const tryMovePawnAt = (clientX, clientY) => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         const { x: cursorX, y: cursorY } = getScaledCoordsFromClient(clientX, clientY);
-        for (const pawn of pawns) {
-            if (ctx.isPointInPath(pawn.touchableArea, cursorX, cursorY)) {
-                if (canPawnMove(pawn, rolledNumber, pawns)) socket.emit('game:move', pawn._id);
+        for (const pawn of getPawnsFrontToBack()) {
+            if (pawn.color !== player.color) continue; // 👈 sirf apne pawns
+            if (!ctx.isPointInPath(pawn.touchableArea, cursorX, cursorY)) continue;
+            if (canPawnMove(pawn, rolledNumber, pawns)) {
+                socket.emit('game:move', pawn._id);
+                break; // 👈 sirf ek pawn move — baaki stack ko chhedo mat
             }
         }
         setHintPawn(null);
     };
 
-    // 🔧 UPDATED: canPawnMove ko ab `pawns` bhi diya jaata hai (blocking check ke liye)
     const handleCanvasClick = event => {
         tryMovePawnAt(event.clientX, event.clientY);
     };
 
-    // 🔧 UPDATED: ab client coords accept karta hai (mouse move ya touch move dono se call hota hai)
+    // 🔧 UPDATED: front-to-back order me check karta hai (pehle plain `pawns` order tha)
     const showHintAt = (clientX, clientY) => {
         if (!nowMoving || !rolledNumber) return;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         const { x, y } = getScaledCoordsFromClient(clientX, clientY);
         canvas.style.cursor = 'default';
-        for (const pawn of pawns) {
+        for (const pawn of getPawnsFrontToBack()) {
             if (
                 ctx.isPointInPath(pawn.touchableArea, x, y) &&
                 player.color === pawn.color &&
@@ -160,10 +191,6 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
 
     const handleMouseMove = event => showHintAt(event.clientX, event.clientY);
 
-    // 🔧 FIX: pehle sirf hint set hota tha aur actual move browser ke synthetic
-    // 'click' event pe depend karta tha — mobile pe ye unreliable/laggy tha.
-    // Ab touchstart pe hi seedha move try hota hai (tap = instant move), aur
-    // preventDefault se page scroll/zoom bhi block hoti hai jab board pe touch ho.
     const handleTouchStart = event => {
         if (event.touches.length === 0) return;
         const touch = event.touches[0];
@@ -191,10 +218,35 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
 
             ctx.clearRect(0, 0, NATIVE_SIZE, NATIVE_SIZE);
             ctx.drawImage(imagesRef.current.map, 0, 0, NATIVE_SIZE, NATIVE_SIZE);
-            paintSafeZones(ctx); // 👈 NEW: map ke upar, pawns se pehle safe-zone markers
-            pawns.forEach((pawn, index) => {
-                pawns[index].touchableArea = paintPawn(ctx, pawn);
+            paintSafeZones(ctx);
+
+            // Same cell pe jitne bhi pawns (same ya mixed color): purane se naye order me draw —
+            // sabse naya (front) sabse upar aur bina offset ke, purane peeche/offset ke saath.
+            const pawnsByPosition = {};
+            pawns.forEach(pawn => {
+                (pawnsByPosition[pawn.position] = pawnsByPosition[pawn.position] || []).push(pawn);
             });
+
+            Object.values(pawnsByPosition).forEach(group => {
+                if (group.length === 1) {
+                    group[0].touchableArea = paintPawn(ctx, group[0]);
+                    return;
+                }
+                const sortedByArrival = [...group].sort(
+                    (a, b) =>
+                        (arrivalOrderRef.current.get(a._id) || 0) - (arrivalOrderRef.current.get(b._id) || 0)
+                );
+                const total = sortedByArrival.length;
+                sortedByArrival.forEach((pawn, i) => {
+                    const stepsFromFront = total - 1 - i;
+                    const offset = {
+                        dx: stepsFromFront * CASCADE_STEP_X,
+                        dy: stepsFromFront * CASCADE_STEP_Y,
+                    };
+                    pawn.touchableArea = paintPawn(ctx, pawn, offset, STACK_SCALE);
+                });
+            });
+
             if (hintPawn) {
                 paintPawn(ctx, hintPawn);
             }
@@ -210,7 +262,7 @@ const Map = ({ pawns, nowMoving, rolledNumber }) => {
             style={{
                 width: `${boardSize}px`,
                 height: `${boardSize}px`,
-                touchAction: 'none', // 🔧 FIX: 'manipulation' se 'none' — ab board pe finger drag se scroll/zoom trigger nahi hoga
+                touchAction: 'none',
             }}
             ref={canvasRef}
             onClick={handleCanvasClick}
