@@ -5,7 +5,8 @@ import four from '../images/dice/4.png';
 import five from '../images/dice/5.png';
 import six from '../images/dice/6.png';
 import roll from '../images/dice/roll.png';
+import rolling from '../images/dice/rolling.gif'; // 🔧 NEW: turn shuru hote hi "rotating dice" animation ke liye — pehle import hi nahi thi
 
-const diceImages = [one, two, three, four, five, six, roll];
+const diceImages = [one, two, three, four, five, six, roll, rolling];
 
 export default diceImages;
