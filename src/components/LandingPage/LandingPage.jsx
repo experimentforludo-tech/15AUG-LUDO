@@ -64,7 +64,7 @@ const LandingPage = () => {
                     <div className="credit">@powered by Creative Mind 😁</div>
                 </div>
 
-                {/* ===== FREE PLAY (BOT) ===== */}
+                {/* ===== FREE PLAY (BOT) — jaisa tha waisa hi ===== */}
                 <div
                     className="card card--purple"
                     tabIndex="0"
@@ -95,7 +95,7 @@ const LandingPage = () => {
                 </div>
             </div>
 
-            {/* ===== NEW: Name prompt before starting Bot game ===== */}
+            {/* ===== Name prompt before starting Bot game ===== */}
             {showNamePrompt && (
                 <div
                     style={{
