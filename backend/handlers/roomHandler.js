@@ -1,13 +1,13 @@
-const { getRooms, getRoom, updateRoom, createNewRoom } = require('../services/roomService');
+const { getRoom, getRooms, updateRoom, createNewRoom, removeRoom } = require('../services/roomService');
 const { sendToOnePlayerRooms, sendToOnePlayerData, sendWinner } = require('../socket/emits');
+const { LOBBY_CLEANUP_TIME } = require('../utils/constants');
+const lobbyCleanupManager = require('../models/lobbyCleanupManager');
 
 module.exports = socket => {
     const req = socket.request;
 
     const handleGetData = async () => {
         const room = await getRoom(req.session.roomId);
-        // Handle the situation when the server crashes and any player reconnects after the time has expired
-        // Typically, the responsibility for changing players is managed by gameHandler.js.
         if (room.nextMoveTime <= Date.now()) {
             room.changeMovingPlayer();
             await updateRoom(room);
@@ -22,7 +22,6 @@ module.exports = socket => {
     };
 
     const handleCreateRoom = async data => {
-        // 👇 NEW: maxPlayers frontend se aata hai (2 ya 4), default 4 agar missing/invalid ho
         const allowedCounts = [2, 4];
         const maxPlayers = allowedCounts.includes(Number(data.maxPlayers)) ? Number(data.maxPlayers) : 4;
 
@@ -31,8 +30,24 @@ module.exports = socket => {
             maxPlayers,
         };
 
-        await createNewRoom(roomData);
+        const room = await createNewRoom(roomData);
+
+        // ===== NEW: 30-min auto-delete agar room start nahi hota =====
+        // (khaali seat, ya sirf host akela — dono cases me room.started hamesha false rahega,
+        // startGame() sirf canStartGame() [>=2 ready players] pe hi call hota hai)
+        scheduleLobbyCleanup(room._id.toString());
+
         sendToOnePlayerRooms(socket.id, await getRooms());
+    };
+
+    // ===== NEW: cleanup scheduler =====
+    const scheduleLobbyCleanup = roomId => {
+        lobbyCleanupManager.set(roomId, async id => {
+            const room = await getRoom(id);
+            // Room already delete ho chuki, ya already start ho chuki (real game chal rahi hai) — kuch mat karo
+            if (!room || room.started) return;
+            await removeRoom(id);
+        }, LOBBY_CLEANUP_TIME);
     };
 
     socket.on('room:data', handleGetData);
